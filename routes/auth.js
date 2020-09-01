@@ -5,6 +5,7 @@ const User = require('../models/user');
 
 const router = express.Router();
 const authController = require('../controllers/auth');
+const { route } = require('./feed');
 
 router.put(
   '/signup',
@@ -25,5 +26,7 @@ router.put(
   ],
   authController.signup
 );
+
+router.post('/login', authController.login);
 
 module.exports = router;
