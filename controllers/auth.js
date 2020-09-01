@@ -67,7 +67,7 @@ exports.login = (req, res, next) => {
           email: loadedUser.email,
           userId: loadedUser._id.toString(),
         },
-        'some super long secret key',
+        'somesuperlongsecretkey',
         { expiresIn: '1h' }
       );
 
