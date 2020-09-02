@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const Post = require('../models/post');
+const User = require('../models/user');
 
 exports.getPosts = (req, res, next) => {
   const currentPage = req.query.page || 1;
@@ -20,13 +21,11 @@ exports.getPosts = (req, res, next) => {
         .limit(perPage);
     })
     .then((posts) => {
-      res
-        .status(200)
-        .json({
-          message: 'Fetched posts',
-          posts: posts,
-          totalItems: totalItems,
-        });
+      res.status(200).json({
+        message: 'Fetched posts',
+        posts: posts,
+        totalItems: totalItems,
+      });
     })
     .catch((error) => {
       if (!error.statusCode) {
@@ -54,18 +53,32 @@ exports.createPost = (req, res, next) => {
   const title = req.body.title;
   const content = req.body.content;
   const imageUrl = req.file.path;
+  const creator;
+
   const post = new Post({
     title: title,
     content: content,
     imageUrl: imageUrl,
-    creator: { name: 'Regi' },
+    creator: req.userId,
   });
   post
     .save()
-    .then((result) => {
+    .then(() => {
+      return User.findById(req.userId);
+    })
+    .then((user) => {
+      creator = user;
+      return user.save();
+    })
+    .then(() => {
+      user.posts.push(post);
       res.status(201).json({
         message: 'Post created successfully!',
-        post: result,
+        post: post,
+        creator: {
+          _id: creator._id,
+          name: creator.name
+        }
       });
     })
     .catch((error) => {
@@ -132,6 +145,12 @@ exports.updatePost = (req, res, next) => {
         throw error;
       }
 
+      if(post.creator.toString() !== req.userId) {
+        const error = new Error('Not authorized');
+        error.statusCode = 403;
+        throw error;
+      }
+
       if (imageUrl !== post.imageUrl) {
         clearImage(post.imageUrl);
       }
@@ -166,6 +185,11 @@ exports.deletePost = (req, res, next) => {
       }
 
       //Check logged in user
+      if(post.creator.toString() !== req.userId) {
+        const error = new Error('Not authorized');
+        error.statusCode = 403;
+        throw error;
+      }
 
       clearImage(post.imageUrl);
       return Post.findByIdAndRemove(postId);
